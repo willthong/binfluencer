@@ -66,8 +66,7 @@ python binfluencer.py --verbose
 
 ## Roadmap 🗺️
 
-* [ ] Weekly fetch
-* [ ] Configuration feature
+* [X] Configurable fetch rate
 * [ ] Mobile version with notifications
 
 ## Contributing 💻

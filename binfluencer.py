@@ -1,11 +1,9 @@
 import argparse
-import arrow
 import datetime as dt
 import ics
 import json
 import logging
 import os
-import pytz
 import requests
 import sys
 import validators
@@ -21,10 +19,12 @@ logging.basicConfig(
 )
 logging.getLogger().addHandler(logging.StreamHandler())
 
-class BinCollection():
-    def __init__(self, colour: str, date: dt.datetime=None) -> None:
+
+class BinCollection:
+    def __init__(self, colour: str, date: dt.datetime = None) -> None:
         self.colour = colour
         self.date = date
+
 
 def new_config_url() -> str:
     """Accepts user input, strips and returns it if it's a valid URL"""
@@ -47,7 +47,9 @@ def new_config_url() -> str:
             return
 
 
-def parse_ics(ics_file: str, next_collections: list[BinCollection]) -> list[BinCollection]:
+def parse_ics(
+    ics_file: str, next_collections: list[BinCollection]
+) -> list[BinCollection]:
     """Downloads ICS file and adds each bin colour's latest date to the next_collections list"""
     with open(ics_file, mode="r") as file:
         cal = ics.Calendar(file.read())
@@ -59,7 +61,9 @@ def parse_ics(ics_file: str, next_collections: list[BinCollection]) -> list[BinC
             for bc in next_collections:
                 if not bc.colour in event.name.lower():
                     continue
-                logging.debug(f"Found {bc.colour} bin collection on {event.begin.datetime.strftime('%Y-%m-%d')}")
+                logging.debug(
+                    f"Found {bc.colour} bin collection on {event.begin.datetime.strftime('%Y-%m-%d')}"
+                )
                 if not bc.date:
                     bc.date = event.begin.datetime
                 elif bc.date:
@@ -79,11 +83,14 @@ def consolidate_bins(next_collections: list[BinCollection]) -> list[BinCollectio
     i = 0
     while i < len(next_collections) - 1:
         bc = next_collections[i]
-        next_bc = next_collections[i+1]
+        next_bc = next_collections[i + 1]
         if bc.date == next_bc.date:
-            new_next_collections.append(BinCollection(
-                bc.colour.capitalize() + " and " + next_bc.colour.capitalize(), bc.date
-            ))
+            new_next_collections.append(
+                BinCollection(
+                    bc.colour.capitalize() + " and " + next_bc.colour.capitalize(),
+                    bc.date,
+                )
+            )
             logging.debug(f"Consolidated {bc.colour} and {next_bc.colour}")
             i += 2
         else:
@@ -103,13 +110,15 @@ def next_bin(next_collections: list[BinCollection]) -> str:
             return f"{bc.date.strftime('%A')} ({bc.colour})"
 
 
-def next_bin_verbose(next_dates: dict) -> str:
+def next_bin_verbose(next_collections: dict) -> str:
     next_collections.sort(key=lambda x: x.date)
     verbose_string = ""
     for bc in next_collections:
         if "and" in bc.colour:
             bc_plural = "s"
-        verbose_string += f"\nNext {bc.colour.lower()} bin{bc_plural}: {bc.date.strftime('%d %b %Y')}"
+        verbose_string += (
+            f"\nNext {bc.colour.lower()} bin{bc_plural}: {bc.date.strftime('%d %B %Y')}"
+        )
     return verbose_string
 
 
@@ -150,7 +159,11 @@ else:
     logging.info(f"Skipping file refresh.")
 
 if "colours" not in config:
-    next_collections = [BinCollection("black"), BinCollection("blue"), BinCollection("green")]
+    next_collections = [
+        BinCollection("black"),
+        BinCollection("blue"),
+        BinCollection("green"),
+    ]
 else:
     next_collections = [BinCollection(colour.lower()) for colour in config["colours"]]
 
@@ -158,7 +171,7 @@ next_collections = parse_ics(ics_file, next_collections)
 next_collections = consolidate_bins(next_collections)
 
 parser = argparse.ArgumentParser()
-parser.add_argument( "--verbose", action=argparse.BooleanOptionalAction)
+parser.add_argument("--verbose", action=argparse.BooleanOptionalAction)
 args = parser.parse_args()
 if args.verbose:
     sys.stdout.write(next_bin_verbose(next_collections))
