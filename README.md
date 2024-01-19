@@ -35,8 +35,6 @@ compatibility:
 
 ## Installation ⚙️
 
-PyPi, presumably?
-
 ## Getting started ▶️
 
 TODO: instructions for fetching your URL from your council website
@@ -52,6 +50,42 @@ These settings can be changed in config.json:
   update your calendar? *Default: 90*
 * `colours`: Which colour of bins do you want to track? *Default: ["black", "blue", "green"]*
 
+
+If you'd like to install Binfluencer to integrate with your Home Assistant installation,
+do the following:
+
+1. Make sure that the machine you're running Home Assistant on already has Python 3.10+
+   installed
+2. Clone this repository into your Home Assistant `config` folder (if you don't have
+   one, create it):
+
+```
+cd config
+git clone https://github.com/willthong/binfluencer
+```
+
+3. Install the script's Python requirements:
+
+```
+pip3 install -r requirements.txt
+```
+
+4. Test that the script runs:
+
+```
+python binfluencer.py
+```
+
+It should return the day of a week and the colour of a bin.
+
+```
+- sensor:
+    name: "Binfluencer"
+    command: "cd /config/scripts/binfluencer; python3 bin_checker.py -h"
+    scan_interval: 3600
+```
+
+
 ## Usage 🗑️
 
 ```
@@ -59,8 +93,12 @@ These settings can be changed in config.json:
 python binfluencer.py 
 
 # Returns 'Next blue bin collection: 1 February 2024; Next green bin collection: 
-# Blue and Green / Next black bin collection: 8 February 2024 (Black)'
+# 1 February 2024; Next black bin collection: 8 February 2024 (Black)'
 python binfluencer.py --verbose
+
+# Returns JSON output:
+# '{ "date": 2024-02-01, "natural_day": "Tomorrow", "colour": "Black" }'
+python binfluencer.py --json
 
 ```
 

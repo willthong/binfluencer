@@ -58,20 +58,20 @@ def parse_ics(
         for event in cal.events:
             if event.begin.datetime <= now:
                 continue
-            for bc in next_collections:
-                if not bc.colour in event.name.lower():
+            for bin_collection in next_collections:
+                if not bin_collection.colour in event.name.lower():
                     continue
                 logging.debug(
-                    f"Found {bc.colour} bin collection on {event.begin.datetime.strftime('%Y-%m-%d')}"
+                    f"Found {bin_collection.colour} bin collection on {event.begin.datetime.strftime('%Y-%m-%d')}"
                 )
-                if not bc.date:
-                    bc.date = event.begin.datetime
-                elif bc.date:
-                    bc.date = min(bc.date, event.begin.datetime)
+                if not bin_collection.date:
+                    bin_collection.date = event.begin.datetime
+                elif bin_collection.date:
+                    bin_collection.date = min(bin_collection.date, event.begin.datetime)
                 break
         logging.debug(
             "Found next bin collection dates: "
-            f"{[[bc.date.strftime('%Y-%m-%d'), bc.colour] for bc in next_collections]}"
+            f"{[[bin_collection.date.strftime('%Y-%m-%d'), bin_collection.colour] for bin_collection in next_collections]}"
         )
         return next_collections
 
@@ -82,44 +82,75 @@ def consolidate_bins(next_collections: list[BinCollection]) -> list[BinCollectio
     new_next_collections = [next_collections[-1]]
     i = 0
     while i < len(next_collections) - 1:
-        bc = next_collections[i]
-        next_bc = next_collections[i + 1]
-        if bc.date == next_bc.date:
+        bin_collection = next_collections[i]
+        next_bin_collection = next_collections[i + 1]
+        if bin_collection.date == next_bin_collection.date:
             new_next_collections.append(
                 BinCollection(
-                    bc.colour.capitalize() + " and " + next_bc.colour.capitalize(),
-                    bc.date,
+                    bin_collection.colour.capitalize()
+                    + " and "
+                    + next_bin_collection.colour.capitalize(),
+                    bin_collection.date,
                 )
             )
-            logging.debug(f"Consolidated {bc.colour} and {next_bc.colour}")
+            logging.debug(
+                f"Consolidated {bin_collection.colour} and {next_bin_collection.colour}"
+            )
             i += 2
         else:
-            bc.colour = bc.colour.capitalize()
-            new_next_collections.append(bc)
+            bin_collection.colour = bin_collection.colour.capitalize()
+            new_next_collections.append(bin_collection)
             i += 1
     return new_next_collections
 
 
 def next_bin(next_collections: list[BinCollection]) -> str:
-    for bc in next_collections:
-        if dt.datetime.now().date() == bc.date.date():
-            return f"Today ({bc.colour})"
-        elif dt.datetime.now().date() + dt.timedelta(days=1) >= bc.date.date():
-            return f"Tomrorrow ({bc.colour})"
-        elif dt.datetime.now().date() + dt.timedelta(days=7) >= bc.date.date():
-            return f"{bc.date.strftime('%A')} ({bc.colour})"
+    for bin_collection in next_collections:
+        if dt.datetime.now().date() == bin_collection.date.date():
+            return f"Today ({bin_collection.colour})"
+        elif (
+            dt.datetime.now().date() + dt.timedelta(days=1)
+            >= bin_collection.date.date()
+        ):
+            return f"Tomrorrow ({bin_collection.colour})"
+        elif (
+            dt.datetime.now().date() + dt.timedelta(days=7)
+            >= bin_collection.date.date()
+        ):
+            return f"{bin_collection.date.strftime('%A')} ({bin_collection.colour})"
 
 
 def next_bin_verbose(next_collections: dict) -> str:
     next_collections.sort(key=lambda x: x.date)
     verbose_string = ""
-    for bc in next_collections:
-        if "and" in bc.colour:
-            bc_plural = "s"
-        verbose_string += (
-            f"\nNext {bc.colour.lower()} bin{bc_plural}: {bc.date.strftime('%d %B %Y')}"
-        )
+    for bin_collection in next_collections:
+        if "and" in bin_collection.colour:
+            plural = "s"
+        else:
+            plural = ""
+        verbose_string += f"\nNext {bin_collection.colour.lower()} bin{plural}: {bin_collection.date.strftime('%d %B %Y')}"
     return verbose_string
+
+
+def next_bin_json(next_collections: dict) -> str:
+    next_collection = None
+    for collection in next_collections:
+        if not next_collection or collection.date < next_collection.date:
+            next_collection = collection
+    if dt.datetime.now().date() == next_collection.date.date():
+        natural_day = "Today"
+    elif dt.datetime.now().date() + dt.timedelta(days=1) >= next_collection.date.date():
+        natural_day = "Tomorrow"
+    elif dt.datetime.now().date() + dt.timedelta(days=7) >= next_collection.date.date():
+        natural_day = next_collection.date.strftime("%A")
+    else:
+        natural_day = next_collection.date.strftime("%e %B")
+    output = {
+        "natural_day": natural_day,
+        "colour": next_collection.colour,
+        "date": next_collection.date.strftime("%Y-%m-%d"),
+    }
+    return json.dumps(output)
 
 
 try:
@@ -139,8 +170,8 @@ else:
     logging.debug(f"Loaded URL {config['url']} from config.json")
 
 # TODO: Customise config["ics_location"]
-ics_file = config["ics_location"] if "ics_location" in config else script_dir
-ics_file += "/bin_dates.ics"
+ics_directory = config["ics_location"] if "ics_location" in config else script_dir
+ics_file = ics_directory + "/bin_dates.ics"
 
 refresh_rate = config["refresh_rate"] if "refresh_rate" in config else 90
 
@@ -172,9 +203,12 @@ next_collections = consolidate_bins(next_collections)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--verbose", action=argparse.BooleanOptionalAction)
+parser.add_argument("--json", action=argparse.BooleanOptionalAction)
 args = parser.parse_args()
 if args.verbose:
     sys.stdout.write(next_bin_verbose(next_collections))
+elif args.json:
+    sys.stdout.write(next_bin_json(next_collections))
 else:
     sys.stdout.write(next_bin(next_collections))
 
