@@ -134,6 +134,7 @@ def next_bin_verbose(next_collections: dict) -> str:
 
 def next_bin_json(next_collections: dict) -> str:
     next_collection = None
+    tomorrow = False
     for collection in next_collections:
         if not next_collection or collection.date < next_collection.date:
             next_collection = collection
@@ -141,6 +142,7 @@ def next_bin_json(next_collections: dict) -> str:
         natural_day = "Today"
     elif dt.datetime.now().date() + dt.timedelta(days=1) >= next_collection.date.date():
         natural_day = "Tomorrow"
+        tomorrow = True
     elif dt.datetime.now().date() + dt.timedelta(days=7) >= next_collection.date.date():
         natural_day = next_collection.date.strftime("%A")
     else:
@@ -149,6 +151,7 @@ def next_bin_json(next_collections: dict) -> str:
         "natural_day": natural_day,
         "colour": next_collection.colour,
         "date": next_collection.date.strftime("%Y-%m-%d"),
+        "tomorrow": tomorrow,
     }
     return json.dumps(output)
 

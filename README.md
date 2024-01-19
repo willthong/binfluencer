@@ -50,7 +50,6 @@ These settings can be changed in config.json:
   update your calendar? *Default: 90*
 * `colours`: Which colour of bins do you want to track? *Default: ["black", "blue", "green"]*
 
-
 If you'd like to install Binfluencer to integrate with your Home Assistant installation,
 do the following:
 
@@ -85,7 +84,6 @@ It should return the day of a week and the colour of a bin.
     scan_interval: 3600
 ```
 
-
 ## Usage 🗑️
 
 ```
@@ -97,8 +95,22 @@ python binfluencer.py
 python binfluencer.py --verbose
 
 # Returns JSON output:
-# '{ "date": 2024-02-01, "natural_day": "Tomorrow", "colour": "Black" }'
+# '{ "date": 2024-02-01, "natural_day": "Tomorrow", "colour": "Black", "tomorrow": False }'
 python binfluencer.py --json
+
+```
+
+Template to display the next bin collection in your dashboard (eg "Tomorrow (Blue and Green)"):
+
+```
+{{ (states("sensor.binfluencer")|from_json()).natural_day }} ({{ (states("sensor.binfluencer")|from_json()).colour }})
+
+```
+
+Template to check if the bin will be collected in the next day:
+
+```
+{% (states('sensor.binfluencer')|from_json()).tomorrow %} 
 
 ```
 
